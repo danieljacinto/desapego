@@ -1,0 +1,35 @@
+[
+  {
+    "id": "1",
+    "slug": "camera-fujifilm-x100v",
+    "title": "Câmera Fujifilm X100V",
+    "description": "Câmera compacta com sensor APS-C 26.1MP, visor híbrido e lente Fujinon 23mm f/2. Usada com muito cuidado, acompanha caixa original e carregador.",
+    "status": "available",
+    "image": "/images/placeholder.jpg",
+    "price": 8500,
+    "compareUrl": "https://www.amazon.com.br/s?k=fujifilm+x100v",
+    "createdAt": "2024-01-15"
+  },
+  {
+    "id": "2",
+    "slug": "kindle-paperwhite-11",
+    "title": "Kindle Paperwhite 11ª Geração",
+    "description": "32GB, resistente à água, tela de 6.8\" sem reflexo. Em perfeito estado, pouco uso.",
+    "status": "sold",
+    "image": "/images/placeholder.jpg",
+    "price": 450,
+    "compareUrl": "",
+    "createdAt": "2024-01-10"
+  },
+  {
+    "id": "3",
+    "slug": "mochila-north-face-borealis",
+    "title": "Mochila The North Face Borealis",
+    "description": "28L, cor preta. Usada por 6 meses, excelente estado. Ideal para trabalho ou trilhas leves.",
+    "status": "available",
+    "image": "/images/placeholder.jpg",
+    "price": 320,
+    "compareUrl": "https://www.northface.com.br/mochila-borealis",
+    "createdAt": "2024-01-08"
+  }
+]

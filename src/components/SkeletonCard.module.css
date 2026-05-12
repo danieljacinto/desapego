@@ -1,0 +1,71 @@
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-border-light) 0%,
+    #f0ede8 50%,
+    var(--color-border-light) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.image {
+  composes: shimmer;
+  aspect-ratio: 4/3;
+  border-radius: 0;
+}
+
+.content {
+  padding: 20px 22px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.badge {
+  composes: shimmer;
+  height: 22px;
+  width: 90px;
+  border-radius: 100px;
+}
+
+.title {
+  composes: shimmer;
+  height: 20px;
+  width: 85%;
+}
+
+.titleShort {
+  composes: shimmer;
+  height: 20px;
+  width: 60%;
+}
+
+.desc {
+  composes: shimmer;
+  height: 14px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.descShort {
+  composes: shimmer;
+  height: 14px;
+  width: 70%;
+}
+
+.btn {
+  composes: shimmer;
+  height: 44px;
+  width: 100%;
+  border-radius: var(--radius-md);
+  margin-top: 4px;
+}

@@ -3,6 +3,7 @@ import styles from './AdminApp.module.css'
 
 const PRODUCTS_PATH = '../public/products.json'
 const CONFIG_PATH = '../public/config.json'
+const MAX_IMAGES = 3
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
@@ -17,22 +18,32 @@ function generateSlug(title) {
     .replace(/\s+/g, '-')
 }
 
-const emptyForm = { title: '', description: '', status: 'available', image: '', price: '', compareUrl: '' }
+const emptyForm = {
+  title: '', description: '', status: 'available',
+  images: [], price: '', compareUrl: ''
+}
 
 export default function AdminApp() {
   const [products, setProducts] = useState([])
   const [config, setConfig] = useState({})
   const [form, setForm] = useState(emptyForm)
+  // imagePreviews: array of { preview: base64|null, path: string }
+  const [imagePreviews, setImagePreviews] = useState([])
   const [editingId, setEditingId] = useState(null)
-  const [preview, setPreview] = useState(null)
-  const [tab, setTab] = useState('products') // products | config | export
+  const [tab, setTab] = useState('products')
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
   const fileRef = useRef()
 
-  // Load data
   useEffect(() => {
-    fetch(PRODUCTS_PATH).then(r => r.json()).then(setProducts).catch(() => setProducts([]))
+    fetch(PRODUCTS_PATH).then(r => r.json()).then(data => {
+      // migrate old "image" string to "images" array
+      const migrated = data.map(p => ({
+        ...p,
+        images: p.images || (p.image ? [p.image] : [])
+      }))
+      setProducts(migrated)
+    }).catch(() => setProducts([]))
     fetch(CONFIG_PATH).then(r => r.json()).then(setConfig).catch(() => {})
   }, [])
 
@@ -41,53 +52,75 @@ export default function AdminApp() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  // Image upload → base64 preview
   function handleImageUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = ev => {
-      setPreview(ev.target.result)
-      setForm(f => ({ ...f, image: `/images/${file.name}` }))
-    }
-    reader.readAsDataURL(file)
+    const files = Array.from(e.target.files)
+    const remaining = MAX_IMAGES - imagePreviews.length
+    if (remaining <= 0) return
+    const toAdd = files.slice(0, remaining)
+
+    toAdd.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = ev => {
+        setImagePreviews(prev => [
+          ...prev,
+          { preview: ev.target.result, path: `/images/${file.name}` }
+        ])
+        setForm(f => ({
+          ...f,
+          images: [...f.images, `/images/${file.name}`]
+        }))
+      }
+      reader.readAsDataURL(file)
+    })
+    // reset so same file can be re-selected
+    e.target.value = ''
+  }
+
+  function removeImage(idx) {
+    setImagePreviews(prev => prev.filter((_, i) => i !== idx))
+    setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))
   }
 
   function handleSubmit(e) {
     e.preventDefault()
     if (!form.title.trim()) return
 
+    const data = {
+      ...form,
+      price: form.price ? parseFloat(form.price) : 0,
+      slug: generateSlug(form.title),
+    }
+    // remove legacy image field
+    delete data.image
+
     if (editingId) {
-      setProducts(ps => ps.map(p => p.id === editingId
-        ? { ...p, ...form, slug: generateSlug(form.title) }
-        : p
-      ))
+      setProducts(ps => ps.map(p => p.id === editingId ? { ...p, ...data } : p))
       showToast('Item atualizado com sucesso!')
       setEditingId(null)
     } else {
-      const newProduct = {
+      setProducts(ps => [{
         id: generateId(),
-        slug: generateSlug(form.title),
-        ...form,
         createdAt: new Date().toISOString().slice(0, 10),
-      }
-      setProducts(ps => [newProduct, ...ps])
+        ...data,
+      }, ...ps])
       showToast('Item adicionado com sucesso!')
     }
     setForm(emptyForm)
-    setPreview(null)
+    setImagePreviews([])
   }
 
   function handleEdit(product) {
+    const imgs = product.images || (product.image ? [product.image] : [])
     setForm({
       title: product.title,
       description: product.description || '',
       status: product.status,
-      image: product.image || '',
+      images: imgs,
       price: product.price || '',
       compareUrl: product.compareUrl || '',
     })
-    setPreview(null)
+    // For existing items we only have paths, no base64 previews
+    setImagePreviews(imgs.map(path => ({ preview: null, path })))
     setEditingId(product.id)
     setTab('products')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -108,17 +141,14 @@ export default function AdminApp() {
   function cancelEdit() {
     setEditingId(null)
     setForm(emptyForm)
-    setPreview(null)
+    setImagePreviews([])
   }
 
-  // Export products.json
   function exportProducts() {
     const blob = new Blob([JSON.stringify(products, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
-    a.download = 'products.json'
-    a.click()
+    a.href = url; a.download = 'products.json'; a.click()
     URL.revokeObjectURL(url)
     showToast('products.json exportado! Mova para public/')
   }
@@ -127,9 +157,7 @@ export default function AdminApp() {
     const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
-    a.download = 'config.json'
-    a.click()
+    a.href = url; a.download = 'config.json'; a.click()
     URL.revokeObjectURL(url)
     showToast('config.json exportado!')
   }
@@ -138,9 +166,10 @@ export default function AdminApp() {
     !search || p.title.toLowerCase().includes(search.toLowerCase())
   )
 
+  const canAddMore = imagePreviews.length < MAX_IMAGES
+
   return (
     <div className={styles.app}>
-      {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <div className={styles.headerLeft}>
@@ -165,7 +194,6 @@ export default function AdminApp() {
         {/* PRODUCTS TAB */}
         {tab === 'products' && (
           <div className={styles.layout}>
-            {/* Form */}
             <aside className={styles.sidebar}>
               <div className={styles.card}>
                 <h2 className={styles.cardTitle}>
@@ -173,45 +201,70 @@ export default function AdminApp() {
                 </h2>
 
                 <form onSubmit={handleSubmit} className={styles.form}>
-                  {/* Image upload */}
+
+                  {/* ── MULTI IMAGE UPLOAD ── */}
                   <div className={styles.field}>
-                    <label className={styles.label}>Foto</label>
-                    <div
-                      className={styles.imageUpload}
-                      onClick={() => fileRef.current.click()}
-                      style={preview ? { padding: 0, border: 'none' } : {}}
-                    >
-                      {preview ? (
-                        <img src={preview} alt="preview" className={styles.imagePreview} />
-                      ) : form.image && !preview ? (
-                        <div className={styles.imagePath}>
-                          <svg viewBox="0 0 20 20" fill="none"><path d="M4 14l4-4 3 3 2-2 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><rect x="2" y="2" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.5"/></svg>
-                          <span>{form.image.split('/').pop()}</span>
+                    <div className={styles.labelRow}>
+                      <label className={styles.label}>Fotos</label>
+                      <span className={styles.imageCount}>
+                        {imagePreviews.length}/{MAX_IMAGES}
+                      </span>
+                    </div>
+
+                    <div className={styles.imageGrid}>
+                      {imagePreviews.map((img, idx) => (
+                        <div key={idx} className={styles.imageThumb}>
+                          {img.preview ? (
+                            <img src={img.preview} alt={`foto ${idx + 1}`} />
+                          ) : (
+                            <div className={styles.imagePathThumb}>
+                              <svg viewBox="0 0 20 20" fill="none">
+                                <rect x="2" y="2" width="16" height="16" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+                                <path d="M4 14l4-4 3 3 2-2 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                              <span>{img.path.split('/').pop()}</span>
+                            </div>
+                          )}
+                          {idx === 0 && <span className={styles.mainLabel}>principal</span>}
+                          <button
+                            type="button"
+                            className={styles.removeThumb}
+                            onClick={() => removeImage(idx)}
+                            aria-label="Remover foto"
+                          >
+                            <svg viewBox="0 0 16 16" fill="none">
+                              <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
+                          </button>
                         </div>
-                      ) : (
-                        <div className={styles.uploadPlaceholder}>
+                      ))}
+
+                      {canAddMore && (
+                        <div
+                          className={styles.imageAdd}
+                          onClick={() => fileRef.current.click()}
+                        >
                           <svg viewBox="0 0 24 24" fill="none">
-                            <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.5"/>
-                            <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-                            <path d="M3 15l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                           </svg>
-                          <span>Clique para selecionar imagem</span>
-                          <small>PNG, JPG, WEBP</small>
+                          <span>
+                            {imagePreviews.length === 0 ? 'Adicionar foto' : 'Mais foto'}
+                          </span>
                         </div>
                       )}
                     </div>
+
                     <input
                       ref={fileRef}
                       type="file"
                       accept="image/*"
+                      multiple
                       style={{ display: 'none' }}
                       onChange={handleImageUpload}
                     />
-                    {preview && (
-                      <button type="button" className={styles.removeImg} onClick={() => { setPreview(null); setForm(f => ({ ...f, image: '' })); }}>
-                        Remover foto
-                      </button>
-                    )}
+                    <small className={styles.slug}>
+                      Até {MAX_IMAGES} fotos. A primeira será a foto principal.
+                    </small>
                   </div>
 
                   {/* Title */}
@@ -331,45 +384,59 @@ export default function AdminApp() {
                 </div>
               ) : (
                 <div className={styles.productList}>
-                  {filtered.map(product => (
-                    <div key={product.id} className={`${styles.productRow} ${product.status === 'sold' ? styles.productSold : ''}`}>
-                      <div className={styles.productImg}>
-                        <img
-                          src={product.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"%3E%3Crect fill="%23f0ede8" width="60" height="60"/%3E%3C/svg%3E'}
-                          alt={product.title}
-                          onError={e => { e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"%3E%3Crect fill="%23f0ede8" width="60" height="60"/%3E%3C/svg%3E' }}
-                        />
-                      </div>
-                      <div className={styles.productInfo}>
-                        <span className={styles.productTitle}>{product.title}</span>
-                        {product.description && (
-                          <span className={styles.productDesc}>{product.description}</span>
-                        )}
-                        <span className={`${styles.productBadge} ${product.status === 'available' ? styles.badgeAvailable : styles.badgeSold}`}>
-                          {product.status === 'available' ? 'Disponível' : 'Vendido'}
-                        </span>
-                      </div>
-                      <div className={styles.productActions}>
-                        <button
-                          className={styles.actionBtn}
-                          onClick={() => toggleStatus(product.id)}
-                          title={product.status === 'available' ? 'Marcar como vendido' : 'Marcar como disponível'}
-                        >
-                          {product.status === 'available' ? (
-                            <svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  {filtered.map(product => {
+                    const thumb = (product.images?.[0]) || product.image || null
+                    return (
+                      <div key={product.id} className={`${styles.productRow} ${product.status === 'sold' ? styles.productSold : ''}`}>
+                        <div className={styles.productImg}>
+                          {thumb ? (
+                            <img
+                              src={thumb}
+                              alt={product.title}
+                              onError={e => { e.target.style.display='none' }}
+                            />
                           ) : (
-                            <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v6l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/></svg>
+                            <svg viewBox="0 0 24 24" fill="none" style={{width:20,height:20}}>
+                              <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.5"/>
+                              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                              <path d="M3 15l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
                           )}
-                        </button>
-                        <button className={styles.actionBtn} onClick={() => handleEdit(product)} title="Editar">
-                          <svg viewBox="0 0 20 20" fill="none"><path d="M14 3l3 3-9.5 9.5-4 1 1-4L14 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
-                        </button>
-                        <button className={`${styles.actionBtn} ${styles.actionDelete}`} onClick={() => handleDelete(product.id)} title="Remover">
-                          <svg viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                        </button>
+                        </div>
+                        <div className={styles.productInfo}>
+                          <span className={styles.productTitle}>{product.title}</span>
+                          {product.description && (
+                            <span className={styles.productDesc}>{product.description}</span>
+                          )}
+                          <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+                            <span className={`${styles.productBadge} ${product.status === 'available' ? styles.badgeAvailable : styles.badgeSold}`}>
+                              {product.status === 'available' ? 'Disponível' : 'Vendido'}
+                            </span>
+                            {product.images?.length > 1 && (
+                              <span className={styles.photoCount}>
+                                {product.images.length} fotos
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className={styles.productActions}>
+                          <button className={styles.actionBtn} onClick={() => toggleStatus(product.id)} title="Mudar status">
+                            {product.status === 'available' ? (
+                              <svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            ) : (
+                              <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v6l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/></svg>
+                            )}
+                          </button>
+                          <button className={styles.actionBtn} onClick={() => handleEdit(product)} title="Editar">
+                            <svg viewBox="0 0 20 20" fill="none"><path d="M14 3l3 3-9.5 9.5-4 1 1-4L14 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+                          </button>
+                          <button className={`${styles.actionBtn} ${styles.actionDelete}`} onClick={() => handleDelete(product.id)} title="Remover">
+                            <svg viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
 
@@ -397,8 +464,8 @@ export default function AdminApp() {
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Número do WhatsApp</label>
-                  <input className={styles.input} value={config.whatsappNumber || ''} onChange={e => setConfig(c => ({ ...c, whatsappNumber: e.target.value }))} placeholder="5511999999999 (só números, com DDI)" />
-                  <small className={styles.slug}>Formato: DDI + DDD + número. Ex: 5511987654321</small>
+                  <input className={styles.input} value={config.whatsappNumber || ''} onChange={e => setConfig(c => ({ ...c, whatsappNumber: e.target.value }))} placeholder="5511999999999" />
+                  <small className={styles.slug}>DDI + DDD + número, só dígitos. Ex: 5511987654321</small>
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Mensagem do WhatsApp</label>
@@ -418,45 +485,31 @@ export default function AdminApp() {
           <div className={styles.configLayout}>
             <div className={styles.card}>
               <h2 className={styles.cardTitle}>Exportar e publicar</h2>
-              <p className={styles.exportDesc}>
-                O site é 100% estático. Para atualizar, exporte os arquivos e faça push no GitHub.
-              </p>
-
+              <p className={styles.exportDesc}>O site é 100% estático. Para atualizar, exporte os arquivos e faça push no GitHub.</p>
               <div className={styles.steps}>
                 <div className={styles.step}>
                   <span className={styles.stepNum}>1</span>
                   <div>
                     <strong>Exporte o products.json</strong>
-                    <p>Clique no botão abaixo e mova o arquivo baixado para a pasta <code>public/</code> do projeto.</p>
-                    <button className={styles.btnPrimary} onClick={exportProducts} style={{ marginTop: '12px' }}>
-                      ↓ Baixar products.json
-                    </button>
+                    <p>Clique no botão abaixo e mova o arquivo para a pasta <code>public/</code>.</p>
+                    <button className={styles.btnPrimary} onClick={exportProducts} style={{ marginTop: '12px' }}>↓ Baixar products.json</button>
                   </div>
                 </div>
                 <div className={styles.step}>
                   <span className={styles.stepNum}>2</span>
                   <div>
                     <strong>Copie as imagens</strong>
-                    <p>Mova as fotos dos itens para <code>public/images/</code>. Os nomes devem bater com os cadastrados.</p>
+                    <p>Mova as fotos para <code>public/images/</code>. Os nomes devem bater com os cadastrados.</p>
                   </div>
                 </div>
                 <div className={styles.step}>
                   <span className={styles.stepNum}>3</span>
                   <div>
                     <strong>Build e push</strong>
-                    <p>No terminal, rode:</p>
-                    <pre className={styles.code}>{`npm run build\ngit add .\ngit commit -m "atualiza produtos"\ngit push`}</pre>
-                  </div>
-                </div>
-                <div className={styles.step}>
-                  <span className={styles.stepNum}>4</span>
-                  <div>
-                    <strong>GitHub Actions faz o deploy</strong>
-                    <p>O arquivo <code>.github/workflows/deploy.yml</code> cuida do deploy automático no GitHub Pages.</p>
+                    <pre className={styles.code}>{`git add .\ngit commit -m "atualiza produtos"\ngit push`}</pre>
                   </div>
                 </div>
               </div>
-
               <div className={styles.exportTip} style={{ marginTop: '24px' }}>
                 <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5"/><path d="M10 9v5M10 6.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 O painel admin <strong>não é hospedado</strong> — roda só localmente com <code>npm run admin</code>.
@@ -466,7 +519,6 @@ export default function AdminApp() {
         )}
       </main>
 
-      {/* Toast */}
       {toast && (
         <div className={`${styles.toast} ${toast.type === 'info' ? styles.toastInfo : ''}`}>
           {toast.msg}

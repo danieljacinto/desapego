@@ -1,48 +1,95 @@
 import { useState } from 'react'
 import styles from './ProductCard.module.css'
 
-export default function ProductCard({ product, config, index }) {
-  const [imgError, setImgError] = useState(false)
-  const [imgLoaded, setImgLoaded] = useState(false)
+const FALLBACK = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23f0ede8" width="400" height="300"/%3E%3Ctext fill="%23c4bfb9" font-family="system-ui" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3Esem imagem%3C/text%3E%3C/svg%3E'
 
+export default function ProductCard({ product, config, index }) {
   const isAvailable = product.status === 'available'
+
+  // Suporte a images[] (novo) e image (legado)
+  const images = product.images?.length
+    ? product.images
+    : product.image
+    ? [product.image]
+    : []
+
+  const [current, setCurrent] = useState(0)
+  const [loaded, setLoaded] = useState({})
+  const [errors, setErrors] = useState({})
+
+  const total = images.length
+
+  function prev(e) {
+    e.stopPropagation()
+    setCurrent(c => (c - 1 + total) % total)
+  }
+  function next(e) {
+    e.stopPropagation()
+    setCurrent(c => (c + 1) % total)
+  }
 
   const handleWhatsApp = () => {
     const number = (config.whatsappNumber || '').replace(/\D/g, '')
     const template = config.whatsappMessage || 'Olá, tenho interesse no item: {TITLE}. Ainda está disponível?'
     const message = template.replace('{TITLE}', product.title)
-    const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`
-    window.open(url, '_blank', 'noopener,noreferrer')
+    window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer')
   }
 
-  const delay = `${index * 0.06}s`
-
   return (
-    <article
-      className={styles.card}
-      style={{ animationDelay: delay }}
-    >
-      {/* Image */}
+    <article className={styles.card} style={{ animationDelay: `${index * 0.06}s` }}>
+
+      {/* IMAGE CAROUSEL */}
       <div className={`${styles.imageWrap} ${!isAvailable ? styles.sold : ''}`}>
-        {!imgLoaded && !imgError && (
-          <div className={styles.skeleton} />
-        )}
-        <img
-          src={imgError ? 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23f0ede8" width="400" height="300"/%3E%3Ctext fill="%23c4bfb9" font-family="system-ui" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3Esem imagem%3C/text%3E%3C/svg%3E' : product.image}
-          alt={product.title}
-          className={`${styles.image} ${imgLoaded ? styles.visible : ''}`}
-          loading="lazy"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => { setImgError(true); setImgLoaded(true) }}
-        />
-        {!isAvailable && (
-          <div className={styles.soldOverlay}>
-            <span>vendido</span>
+
+        {images.length > 0 ? images.map((src, i) => (
+          <div key={i} className={`${styles.slide} ${i === current ? styles.slideActive : ''}`}>
+            {!loaded[i] && !errors[i] && <div className={styles.skeleton} />}
+            <img
+              src={errors[i] ? FALLBACK : src}
+              alt={`${product.title} — foto ${i + 1}`}
+              className={`${styles.image} ${loaded[i] ? styles.visible : ''}`}
+              loading="lazy"
+              onLoad={() => setLoaded(l => ({ ...l, [i]: true }))}
+              onError={() => { setErrors(e => ({ ...e, [i]: true })); setLoaded(l => ({ ...l, [i]: true })) }}
+            />
           </div>
+        )) : (
+          <div className={`${styles.slide} ${styles.slideActive}`}>
+            <img src={FALLBACK} alt="sem imagem" className={`${styles.image} ${styles.visible}`} />
+          </div>
+        )}
+
+        {total > 1 && (
+          <>
+            <button className={`${styles.arrow} ${styles.arrowLeft}`} onClick={prev} aria-label="Foto anterior">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M12 5l-5 5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <button className={`${styles.arrow} ${styles.arrowRight}`} onClick={next} aria-label="Próxima foto">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M8 5l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div className={styles.dots}>
+              {images.map((_, i) => (
+                <button
+                  key={i}
+                  className={`${styles.dot} ${i === current ? styles.dotActive : ''}`}
+                  onClick={e => { e.stopPropagation(); setCurrent(i) }}
+                  aria-label={`Foto ${i + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {!isAvailable && (
+          <div className={styles.soldOverlay}><span>vendido</span></div>
         )}
       </div>
 
-      {/* Content */}
+      {/* CONTENT */}
       <div className={styles.content}>
         <div className={styles.meta}>
           <span className={`${styles.badge} ${isAvailable ? styles.badgeAvailable : styles.badgeSold}`}>
@@ -74,13 +121,7 @@ export default function ProductCard({ product, config, index }) {
           )}
 
           {product.compareUrl && (
-            <a
-              className={styles.compareBtn}
-              href={product.compareUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              title="Ver preço do produto novo"
-            >
+            <a className={styles.compareBtn} href={product.compareUrl} target="_blank" rel="noopener noreferrer">
               <svg viewBox="0 0 20 20" fill="none">
                 <path d="M10 3H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                 <path d="M15 3h2v2M17 3l-7 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

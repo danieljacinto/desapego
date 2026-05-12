@@ -63,11 +63,11 @@ export default function AdminApp() {
       reader.onload = ev => {
         setImagePreviews(prev => [
           ...prev,
-          { preview: ev.target.result, path: `/images/${file.name}` }
+          { preview: ev.target.result, path: `./images/${file.name}` }
         ])
         setForm(f => ({
           ...f,
-          images: [...f.images, `/images/${file.name}`]
+          images: [...f.images, `./images/${file.name}`]
         }))
       }
       reader.readAsDataURL(file)

@@ -6,9 +6,9 @@
     "description": "Painel suspenso para TV. Para referência, na foto, TV é de 55 polegadas. 2 Leds na parte superior, funcionando. Produto impecável.",
     "status": "available",
     "images": [
-      "/images/Screenshot 2026-05-12 at 17.02.15.png",
-      "/images/IMG_7895.JPG",
-      "/images/IMG_7890.JPG"
+      "./images/Screenshot 2026-05-12 at 17.02.15.png",
+      "./images/IMG_7895.JPG",
+      "./images/IMG_7890.JPG"
     ],
     "price": 800,
     "compareUrl": "https://www.mercadolivre.com.br/painel-home-suspenso-decore-led-18-nature-com-off-white-para-tv-ate-52/p/MLB61908505?pdp_filters=item_id%3AMLB5917117832&matt_tool=38524122#origin=share&sid=share&wid=MLB5917117832&action=copy",

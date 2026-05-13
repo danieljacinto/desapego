@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import styles from './AdminApp.module.css'
 
-const PRODUCTS_PATH = '../public/products.json'
-const CONFIG_PATH = '../public/config.json'
+const PRODUCTS_PATH = '/public-data/products.json'
+const CONFIG_PATH = '/public-data/config.json'
 const MAX_IMAGES = 3
 
 function generateId() {
@@ -33,18 +33,54 @@ export default function AdminApp() {
   const [tab, setTab] = useState('products')
   const [toast, setToast] = useState(null)
   const [search, setSearch] = useState('')
+  const [loadSource, setLoadSource] = useState(null)
   const fileRef = useRef()
 
   useEffect(() => {
-    fetch(PRODUCTS_PATH).then(r => r.json()).then(data => {
-      // migrate old "image" string to "images" array
-      const migrated = data.map(p => ({
-        ...p,
-        images: p.images || (p.image ? [p.image] : [])
-      }))
-      setProducts(migrated)
-    }).catch(() => setProducts([]))
-    fetch(CONFIG_PATH).then(r => r.json()).then(setConfig).catch(() => {})
+    fetch(CONFIG_PATH)
+      .then(r => r.json())
+      .then(cfg => {
+        setConfig(cfg)
+
+        // Monta a URL via proxy do Vite (evita bloqueio de CORS)
+        // /gh-pages/desapego/products.json → proxy → https://danieljacinto.github.io/desapego/products.json
+        const remoteProxyUrl = cfg.publicUrl
+          ? `/gh-pages${new URL(cfg.publicUrl).pathname.replace(/\/$/, '')}/products.json?t=${Date.now()}`
+          : null
+
+        const loadProducts = (data, source) => {
+          const migrated = data.map(p => ({
+            ...p,
+            images: p.images || (p.image ? [p.image] : [])
+          }))
+          setProducts(migrated)
+          setLoadSource(source)
+        }
+
+        if (remoteProxyUrl) {
+          fetch(remoteProxyUrl)
+            .then(r => { if (!r.ok) throw new Error('não publicado'); return r.json() })
+            .then(data => loadProducts(data, 'remote'))
+            .catch(() => {
+              // Fallback: arquivo local
+              fetch(PRODUCTS_PATH)
+                .then(r => r.json())
+                .then(data => loadProducts(data, 'local'))
+                .catch(() => setProducts([]))
+            })
+        } else {
+          fetch(PRODUCTS_PATH)
+            .then(r => r.json())
+            .then(data => loadProducts(data, 'local'))
+            .catch(() => setProducts([]))
+        }
+      })
+      .catch(() => {
+        fetch(PRODUCTS_PATH)
+          .then(r => r.json())
+          .then(data => setProducts(data.map(p => ({ ...p, images: p.images || (p.image ? [p.image] : []) }))))
+          .catch(() => setProducts([]))
+      })
   }, [])
 
   function showToast(msg, type = 'success') {
@@ -377,6 +413,33 @@ export default function AdminApp() {
                   />
                 </div>
               </div>
+
+              {/* Source indicator */}
+              {loadSource && (
+                <div className={`${styles.sourceTag} ${loadSource === 'remote' ? styles.sourceRemote : styles.sourceLocal}`}>
+                  {loadSource === 'remote' ? (
+                    <>
+                      <svg viewBox="0 0 16 16" fill="none">
+                        <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+                        <path d="M5.5 8c0-1.5.5-3 2.5-3s2.5 1.5 2.5 3-.5 3-2.5 3-2.5-1.5-2.5-3z" stroke="currentColor" strokeWidth="1.2"/>
+                        <path d="M2 8h12" stroke="currentColor" strokeWidth="1.2"/>
+                      </svg>
+                      Sincronizado com o site publicado
+                      <a href={config.publicUrl} target="_blank" rel="noopener noreferrer" className={styles.sourceLink}>
+                        ver site →
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <svg viewBox="0 0 16 16" fill="none">
+                        <path d="M2 12V5l6-3 6 3v7" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+                        <rect x="5" y="8" width="6" height="4" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                      </svg>
+                      Carregado do arquivo local · configure <code>publicUrl</code> no config.json para sincronizar
+                    </>
+                  )}
+                </div>
+              )}
 
               {filtered.length === 0 ? (
                 <div className={styles.emptyState}>

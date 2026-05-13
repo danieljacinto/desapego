@@ -1,4 +1,10 @@
 {
-  "whatsappNumber": "+5516997408109",
-  "whatsappMessage": "Olá, tenho interesse no item {TITLE}. Ainda está disponível?"
+  "siteName": "desapego.",
+  "siteDescription": "Itens com história, prontos para um novo lar.",
+  "whatsappNumber": "5516997408109",
+  "whatsappMessage": "Olá, tenho interesse no item: {TITLE}. Ainda está disponível?",
+  "ogImage": "/og-image.jpg",
+  "accentColor": "#1a1a1a",
+  "publicUrl": "https://danieljacinto.github.io/desapego"
 }
+

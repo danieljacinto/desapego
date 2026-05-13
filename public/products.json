@@ -13,5 +13,45 @@
     "price": 800,
     "compareUrl": "https://www.mercadolivre.com.br/painel-home-suspenso-decore-led-18-nature-com-off-white-para-tv-ate-52/p/MLB61908505?pdp_filters=item_id%3AMLB5917117832&matt_tool=38524122#origin=share&sid=share&wid=MLB5917117832&action=copy",
     "slug": "painel-suspenso-para-tv-com-gavetas"
-  }
+  },
+  {
+    "id": "mp4d7x4fys0z",
+    "createdAt": "2026-05-13",
+    "title": "Cozinha Compacta",
+    "description": "Cozinha Compacta 120 Cm Damasco Off White – Poquema. MDP. Pequenas marcas de uso.",
+    "status": "available",
+    "images": [
+      "./images/ChatGPT Image 13 de mai. de 2026, 14_56_31.png"
+    ],
+    "price": 150,
+    "compareUrl": "https://www.madeiramadeira.com.br/cozinha-kit-duda-120-cm-damasco-off-white-poquema-431615423.html",
+    "slug": "cozinha-compacta"
+  },
+  {
+    "id": "mp4cu5tht82o",
+    "createdAt": "2026-05-13",
+    "title": "Sofá Retrátil/Reclinável ",
+    "description": "Sofá Retrátil/Reclinável 2,50m Suede Cinza com Molas no Assento. Bem conservado.",
+    "status": "available",
+    "images": [
+      "./images/IMG_7892.PNG"
+    ],
+    "price": 1200,
+    "compareUrl": "",
+    "slug": "sofa-retratilreclinavel"
+  },
+  {
+    "id": "mp4cgp5fg0m1",
+    "createdAt": "2026-05-13",
+    "title": "Cadeiras Pretas de Plástico",
+    "description": "A Cadeira em Polipropileno perfeita para espaços internos ou externos. Suporta até 154kg. Super conservadas. 8 unidades disponíveis.",
+    "status": "available",
+    "images": [
+      "./images/D_NQ_NP_2X_880467-MLA108559284449_032026-F.webp",
+      "./images/D_NQ_NP_2X_906335-MLA76591191846_062024-F.webp"
+    ],
+    "price": 30,
+    "compareUrl": "https://www.maravilhasdolar.com/poltrona-alta-black-arqp-1/p",
+    "slug": "cadeiras-pretas-de-plastico"
+  }  
 ]

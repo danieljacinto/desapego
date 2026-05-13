@@ -35,6 +35,34 @@ export default function AdminApp() {
   const [search, setSearch] = useState('')
   const [loadSource, setLoadSource] = useState(null)
   const fileRef = useRef()
+  const dragItem = useRef(null)
+  const dragOverItem = useRef(null)
+
+  function handleDragStart(id) {
+    dragItem.current = id
+  }
+
+  function handleDragEnter(id) {
+    dragOverItem.current = id
+  }
+
+  function handleDragEnd() {
+    const fromId = dragItem.current
+    const toId = dragOverItem.current
+    if (!fromId || !toId || fromId === toId) return
+
+    setProducts(prev => {
+      const updated = [...prev]
+      const fromIndex = updated.findIndex(p => p.id === fromId)
+      const toIndex = updated.findIndex(p => p.id === toId)
+      const [dragged] = updated.splice(fromIndex, 1)
+      updated.splice(toIndex, 0, dragged)
+      return updated
+    })
+
+    dragItem.current = null
+    dragOverItem.current = null
+  }
 
   useEffect(() => {
     fetch(CONFIG_PATH)
@@ -446,61 +474,91 @@ export default function AdminApp() {
                   <p>Nenhum item ainda. Adicione o primeiro item!</p>
                 </div>
               ) : (
-                <div className={styles.productList}>
-                  {filtered.map(product => {
-                    const thumb = (product.images?.[0]) || product.image || null
-                    return (
-                      <div key={product.id} className={`${styles.productRow} ${product.status === 'sold' ? styles.productSold : ''}`}>
-                        <div className={styles.productImg}>
-                          {thumb ? (
-                            <img
-                              src={thumb}
-                              alt={product.title}
-                              onError={e => { e.target.style.display='none' }}
-                            />
-                          ) : (
-                            <svg viewBox="0 0 24 24" fill="none" style={{width:20,height:20}}>
-                              <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.5"/>
-                              <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-                              <path d="M3 15l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                            </svg>
+                <>
+                  {!search && (
+                    <p className={styles.dragHint}>
+                      <svg viewBox="0 0 16 16" fill="none">
+                        <path d="M6 3v10M10 3v10M3 6h10M3 10h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                      Arraste os itens para reordenar
+                    </p>
+                  )}
+                  <div className={styles.productList}>
+                    {filtered.map((product) => {
+                      const thumb = (product.images?.[0]) || product.image || null
+                      return (
+                        <div
+                          key={product.id}
+                          className={`${styles.productRow} ${product.status === 'sold' ? styles.productSold : ''}`}
+                          draggable={!search}
+                          onDragStart={() => handleDragStart(product.id)}
+                          onDragEnter={() => handleDragEnter(product.id)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={e => e.preventDefault()}
+                        >
+                          {!search && (
+                            <div className={styles.dragHandle} title="Arrastar para reordenar">
+                              <svg viewBox="0 0 16 16" fill="none">
+                                <circle cx="5.5" cy="4" r="1" fill="currentColor"/>
+                                <circle cx="10.5" cy="4" r="1" fill="currentColor"/>
+                                <circle cx="5.5" cy="8" r="1" fill="currentColor"/>
+                                <circle cx="10.5" cy="8" r="1" fill="currentColor"/>
+                                <circle cx="5.5" cy="12" r="1" fill="currentColor"/>
+                                <circle cx="10.5" cy="12" r="1" fill="currentColor"/>
+                              </svg>
+                            </div>
                           )}
-                        </div>
-                        <div className={styles.productInfo}>
-                          <span className={styles.productTitle}>{product.title}</span>
-                          {product.description && (
-                            <span className={styles.productDesc}>{product.description}</span>
-                          )}
-                          <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
-                            <span className={`${styles.productBadge} ${product.status === 'available' ? styles.badgeAvailable : styles.badgeSold}`}>
-                              {product.status === 'available' ? 'Disponível' : 'Vendido'}
-                            </span>
-                            {product.images?.length > 1 && (
-                              <span className={styles.photoCount}>
-                                {product.images.length} fotos
-                              </span>
+                          <div className={styles.productImg}>
+                            {thumb ? (
+                              <img
+                                src={thumb}
+                                alt={product.title}
+                                onError={e => { e.target.style.display='none' }}
+                              />
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" style={{width:20,height:20}}>
+                                <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.5"/>
+                                <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+                                <path d="M3 15l5-5 4 4 3-3 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                              </svg>
                             )}
                           </div>
-                        </div>
-                        <div className={styles.productActions}>
-                          <button className={styles.actionBtn} onClick={() => toggleStatus(product.id)} title="Mudar status">
-                            {product.status === 'available' ? (
-                              <svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                            ) : (
-                              <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v6l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/></svg>
+                          <div className={styles.productInfo}>
+                            <span className={styles.productTitle}>{product.title}</span>
+                            {product.description && (
+                              <span className={styles.productDesc}>{product.description}</span>
                             )}
-                          </button>
-                          <button className={styles.actionBtn} onClick={() => handleEdit(product)} title="Editar">
-                            <svg viewBox="0 0 20 20" fill="none"><path d="M14 3l3 3-9.5 9.5-4 1 1-4L14 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
-                          </button>
-                          <button className={`${styles.actionBtn} ${styles.actionDelete}`} onClick={() => handleDelete(product.id)} title="Remover">
-                            <svg viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                          </button>
+                            <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+                              <span className={`${styles.productBadge} ${product.status === 'available' ? styles.badgeAvailable : styles.badgeSold}`}>
+                                {product.status === 'available' ? 'Disponível' : 'Vendido'}
+                              </span>
+                              {product.images?.length > 1 && (
+                                <span className={styles.photoCount}>
+                                  {product.images.length} fotos
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className={styles.productActions}>
+                            <button className={styles.actionBtn} onClick={() => toggleStatus(product.id)} title="Mudar status">
+                              {product.status === 'available' ? (
+                                <svg viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              ) : (
+                                <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v6l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5"/></svg>
+                              )}
+                            </button>
+                            <button className={styles.actionBtn} onClick={() => handleEdit(product)} title="Editar">
+                              <svg viewBox="0 0 20 20" fill="none"><path d="M14 3l3 3-9.5 9.5-4 1 1-4L14 3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+                            </button>
+                            <button className={`${styles.actionBtn} ${styles.actionDelete}`} onClick={() => handleDelete(product.id)} title="Remover">
+                              <svg viewBox="0 0 20 20" fill="none"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                      )
+                    })}
+                  </div>
+                </>
               )}
 
               <div className={styles.exportTip}>

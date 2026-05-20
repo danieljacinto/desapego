@@ -53,5 +53,34 @@
     "price": 30,
     "compareUrl": "https://www.maravilhasdolar.com/poltrona-alta-black-arqp-1/p",
     "slug": "cadeiras-pretas-de-plastico"
-  }  
+  },
+  {
+    "id": "mpelgb4pdnon",
+    "createdAt": "2026-05-20",
+    "title": "Coleção Completa Super Mario McLanche Feliz 2014 Lacrados",
+    "description": "Coleção completa do Super Mario lançada pelo McDonald’s no McLanche Feliz em 2014.\nTodos os 9 brinquedos originais e lacrados.\nExcelente estado para colecionadores Nintendo/Mario.\nItens preservados desde a época do lançamento.",
+    "status": "available",
+    "images": [
+      "./images/WhatsApp Image 2026-05-20 at 09.42.49 (2).jpeg",
+      "./images/WhatsApp Image 2026-05-20 at 09.42.09.jpeg"
+    ],
+    "price": 399.97,
+    "compareUrl": "https://www.mercadolivre.com.br/colecao--mario-mcdonalds-2014--lacrado--nintendo/up/MLBU2997203668?pdp_filters=item_id%3AMLB5275019520&matt_tool=38524122#origin=share&sid=share&wid=MLB5275019520&action=copy",
+    "slug": "colecao-completa-super-mario-mclanche-feliz-2014-lacrados"
+  },
+  {
+    "id": "mpem1yadg3m9",
+    "createdAt": "2026-05-20",
+    "title": "Mario Kart McLanche Feliz 2015 Lacrados",
+    "description": "**Valor unitário**\n\nDisponíveis:\n- Mario\n- Donkey Kong\n\nAmbos lacrados.",
+    "status": "available",
+    "images": [
+      "./images/WhatsApp Image 2026-05-20 at 09.42.05.jpeg",
+      "./images/WhatsApp Image 2026-05-20 at 09.42.49.jpeg",
+      "./images/WhatsApp Image 2026-05-20 at 09.42.49 (1).jpeg"
+    ],
+    "price": 35,
+    "compareUrl": "https://shopee.com.br/Carrinhos-Mario-Kart-8-McDonald's-2015-Nintendo-Escolha-o-Seu!-i.1082767144.22997091648?extraParams=%7B%22display_model_id%22%3A179707944797%2C%22model_selection_logic%22%3A3%7D&sp_atk=92ef59bf-894b-44a9-a3d0-73514a341719&xptdk=92ef59bf-894b-44a9-a3d0-73514a341719",
+    "slug": "mario-kart-mclanche-feliz-2014-lacrados"
+  }
 ]

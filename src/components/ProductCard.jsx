@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import styles from './ProductCard.module.css'
 
 const FALLBACK = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"%3E%3Crect fill="%23f0ede8" width="400" height="300"/%3E%3Ctext fill="%23c4bfb9" font-family="system-ui" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3Esem imagem%3C/text%3E%3C/svg%3E'
@@ -91,8 +91,27 @@ export default function ProductCard({ product, config, index }) {
   const [loaded, setLoaded] = useState({})
   const [errors, setErrors] = useState({})
   const [lightboxIndex, setLightboxIndex] = useState(null)
+  const touchStartX = useRef(null)
+  const touchStartY = useRef(null)
 
   const total = images.length
+
+  function handleTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  function handleTouchEnd(e) {
+    if (touchStartX.current === null) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    // Só processa se o movimento horizontal for maior que o vertical (evita conflito com scroll)
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return
+    if (dx < 0) setCurrent(c => (c + 1) % total)
+    else setCurrent(c => (c - 1 + total) % total)
+    touchStartX.current = null
+    touchStartY.current = null
+  }
 
   function prev(e) {
     e.stopPropagation()
@@ -123,7 +142,11 @@ export default function ProductCard({ product, config, index }) {
       <article className={styles.card} style={{ animationDelay: `${index * 0.06}s` }}>
 
         {/* IMAGE CAROUSEL */}
-        <div className={`${styles.imageWrap} ${!isAvailable ? styles.sold : ''}`}>
+        <div
+          className={`${styles.imageWrap} ${!isAvailable ? styles.sold : ''}`}
+          onTouchStart={total > 1 ? handleTouchStart : undefined}
+          onTouchEnd={total > 1 ? handleTouchEnd : undefined}
+        >
 
           {images.length > 0 ? images.map((src, i) => (
             <div key={i} className={`${styles.slide} ${i === current ? styles.slideActive : ''}`}>

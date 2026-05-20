@@ -35,6 +35,7 @@ export default function AdminApp() {
   const [search, setSearch] = useState('')
   const [loadSource, setLoadSource] = useState(null)
   const fileRef = useRef()
+  const previewCache = useRef({})
   const dragItem = useRef(null)
   const dragOverItem = useRef(null)
 
@@ -125,13 +126,15 @@ export default function AdminApp() {
     toAdd.forEach(file => {
       const reader = new FileReader()
       reader.onload = ev => {
+        const path = `./images/${file.name}`
+        previewCache.current[path] = ev.target.result
         setImagePreviews(prev => [
           ...prev,
-          { preview: ev.target.result, path: `./images/${file.name}` }
+          { preview: ev.target.result, path }
         ])
         setForm(f => ({
           ...f,
-          images: [...f.images, `./images/${file.name}`]
+          images: [...f.images, path]
         }))
       }
       reader.readAsDataURL(file)
@@ -183,8 +186,7 @@ export default function AdminApp() {
       price: product.price || '',
       compareUrl: product.compareUrl || '',
     })
-    // For existing items we only have paths, no base64 previews
-    setImagePreviews(imgs.map(path => ({ preview: null, path })))
+    setImagePreviews(imgs.map(path => ({ preview: previewCache.current[path] || null, path })))
     setEditingId(product.id)
     setTab('products')
     window.scrollTo({ top: 0, behavior: 'smooth' })

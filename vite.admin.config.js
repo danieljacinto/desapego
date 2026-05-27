@@ -5,16 +5,27 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+function getMimeType(filePath) {
+  const ext = filePath.split('.').pop().toLowerCase()
+  const types = {
+    jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
+    gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
+    json: 'application/json',
+  }
+  return types[ext] || 'application/octet-stream'
+}
+
 export default defineConfig({
   plugins: [
     react(),
     {
-      name: 'cors-proxy',
+      name: 'local-server',
       configureServer(server) {
-        // Serve arquivos da pasta /public para o admin
+
+        // Serve JSON da pasta /public
         server.middlewares.use('/public-data', async (req, res, next) => {
           const { createReadStream, existsSync } = await import('fs')
-          const filePath = path.join(__dirname, 'public', req.url)
+          const filePath = path.join(__dirname, 'public', decodeURIComponent(req.url))
           if (existsSync(filePath)) {
             res.setHeader('Content-Type', 'application/json')
             createReadStream(filePath).pipe(res)
@@ -23,7 +34,29 @@ export default defineConfig({
           }
         })
 
-        // Proxy para o GitHub Pages (contorna CORS)
+        // Serve imagens da pasta /public/images/ com decode de URI
+        server.middlewares.use('/images', async (req, res, next) => {
+          const { createReadStream, existsSync } = await import('fs')
+          // decodeURIComponent trata espaços (%20) e caracteres especiais
+          const decoded = decodeURIComponent(req.url)
+          const filePath = path.join(__dirname, 'public', 'images', decoded)
+          if (existsSync(filePath)) {
+            res.setHeader('Content-Type', getMimeType(filePath))
+            res.setHeader('Cache-Control', 'public, max-age=3600')
+            createReadStream(filePath).pipe(res)
+          } else {
+            // tenta sem o leading slash
+            const filePath2 = path.join(__dirname, 'public', 'images', decoded.replace(/^\//, ''))
+            if (existsSync(filePath2)) {
+              res.setHeader('Content-Type', getMimeType(filePath2))
+              createReadStream(filePath2).pipe(res)
+            } else {
+              next()
+            }
+          }
+        })
+
+        // Proxy GitHub Pages
         server.middlewares.use('/gh-pages', async (req, res) => {
           try {
             const targetUrl = `https://danieljacinto.github.io${req.url}`
@@ -42,9 +75,7 @@ export default defineConfig({
   ],
   root: 'admin',
   server: {
-    fs: {
-      allow: [__dirname]
-    }
+    fs: { allow: [__dirname] }
   },
   build: {
     outDir: '../dist-admin',

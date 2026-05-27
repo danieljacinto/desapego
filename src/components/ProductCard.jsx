@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import styles from './ProductCard.module.css'
 
@@ -91,6 +92,7 @@ export default function ProductCard({ product, config, index }) {
   const [loaded, setLoaded] = useState({})
   const [errors, setErrors] = useState({})
   const [lightboxIndex, setLightboxIndex] = useState(null)
+  const [expanded, setExpanded] = useState(false)
   const touchStartX = useRef(null)
   const touchStartY = useRef(null)
 
@@ -218,9 +220,54 @@ export default function ProductCard({ product, config, index }) {
 
           <h2 className={styles.title}>{product.title}</h2>
 
-          {product.description && (
-            <p className={styles.description}>{product.description}</p>
-          )}
+          {product.description && (() => {
+            const lines = product.description.split('\n')
+            const needsExpand = product.description.length > 120 || lines.length > 3
+            return (
+              <div className={styles.descriptionWrap}>
+                <p className={styles.description}>
+                  {lines.slice(0, 3).map((line, i) => (
+                    <span key={i}>
+                      {line}
+                      {i < Math.min(lines.length, 3) - 1 && <br />}
+                    </span>
+                  ))}
+                  {needsExpand && lines.length > 3 && '…'}
+                </p>
+                {needsExpand && (
+                  <button
+                    className={styles.expandBtn}
+                    onClick={e => { e.stopPropagation(); setExpanded(true) }}
+                  >
+                    ver descrição completa ↗
+                  </button>
+                )}
+                {expanded && createPortal(
+                  <div className={styles.descPopoverOverlay} onClick={() => setExpanded(false)}>
+                    <div className={styles.descPopover} onClick={e => e.stopPropagation()}>
+                      <div className={styles.descPopoverHeader}>
+                        <h3 className={styles.descPopoverTitle}>{product.title}</h3>
+                        <button className={styles.descPopoverClose} onClick={() => setExpanded(false)} aria-label="Fechar">
+                          <svg viewBox="0 0 20 20" fill="none">
+                            <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                      <p className={styles.descPopoverText}>
+                        {lines.map((line, i) => (
+                          <span key={i}>
+                            {line}
+                            {i < lines.length - 1 && <br />}
+                          </span>
+                        ))}
+                      </p>
+                    </div>
+                  </div>,
+                  document.body
+                )}
+              </div>
+            )
+          })()}
 
           {product.price > 0 && (
             <p className={styles.price}>
@@ -228,7 +275,7 @@ export default function ProductCard({ product, config, index }) {
             </p>
           )}
 
-          <div className={styles.actions}>
+          <div className={styles.actions} style={!(product.price > 0) ? {marginTop:'auto'} : {}}>
             {isAvailable && (
               <button className={styles.ctaBtn} onClick={handleWhatsApp}>
                 <svg className={styles.waIcon} viewBox="0 0 24 24" fill="currentColor">
